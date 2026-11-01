@@ -17,7 +17,8 @@ import {
   Trash2,
   Check,
   FileCheck,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -38,8 +39,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'about' | 'experience' | 'education' | 'resume'>('about');
   const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onSaveProfile) return;
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      await onSaveProfile({ avatar: dataUrl });
+      setIsUploadingAvatar(false);
+      setResumeNotice('Profile picture updated successfully!');
+      setTimeout(() => setResumeNotice(null), 3000);
+    };
+    reader.readAsDataURL(file);
+  };
 
   React.useEffect(() => {
     if (activeSection === 'experience' || activeSection === 'education' || activeSection === 'resume') {
@@ -179,13 +197,31 @@ ${
         <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 pb-4 border-b border-[#222222]">
           {/* Avatar & Channel Details (NO subscriber count anywhere) */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="relative">
+            <div className="relative group">
+              <input
+                type="file"
+                ref={avatarInputRef}
+                accept="image/*"
+                onChange={handleAvatarFileSelect}
+                className="hidden"
+              />
               <img
                 src={profile.avatar}
                 alt={profile.name}
                 referrerPolicy="no-referrer"
                 className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-[#0f0f0f] shadow-xl bg-[#1c1c1c]"
               />
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-neutral-900/90 border border-neutral-700 text-white hover:bg-neutral-800 transition-colors shadow-lg cursor-pointer"
+                  title="Upload / Change Profile Picture"
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="space-y-1">

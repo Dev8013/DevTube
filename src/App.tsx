@@ -12,6 +12,7 @@ import { AnimeTrackerView } from './components/AnimeTrackerView';
 import { AddAnimeModal } from './components/AddAnimeModal';
 import { ProfileView } from './components/ProfileView';
 import { LoginModal } from './components/LoginModal';
+import { DatabaseSyncModal } from './components/DatabaseSyncModal';
 import { api } from './services/api';
 import { ProjectItem, UserProfile, SecureDocument, AnimeDramaItem } from './types';
 import { initialProfile, initialProjects, initialDocuments, initialAnimeDrama } from './data/initialData';
@@ -44,6 +45,7 @@ export default function App() {
 
   const [isAddAnimeOpen, setIsAddAnimeOpen] = useState<boolean>(false);
   const [editingAnimeItem, setEditingAnimeItem] = useState<AnimeDramaItem | null>(null);
+  const [isDbSyncOpen, setIsDbSyncOpen] = useState<boolean>(false);
 
   // Initial load
   useEffect(() => {
@@ -217,6 +219,7 @@ export default function App() {
           setIsUploadProjectOpen(true);
         }}
         onOpenEditProfile={() => setIsEditProfileOpen(true)}
+        onOpenDbSync={() => setIsDbSyncOpen(true)}
         currentView={currentView}
         onNavigate={(view) => {
           setCurrentView(view);
@@ -390,6 +393,17 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* 10. Database & MongoDB Real-Time Sync Modal */}
+      <DatabaseSyncModal
+        isOpen={isDbSyncOpen}
+        onClose={() => setIsDbSyncOpen(false)}
+        onDataPurged={() => {
+          setProjects([]);
+          setDocuments([]);
+          setAnimeDrama([]);
+        }}
       />
     </div>
   );

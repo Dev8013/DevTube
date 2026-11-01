@@ -16,7 +16,7 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Persistent JSON storage fallback if MongoDB is not connected
+// Persistent JSON storage fallback & local cache
 const DATA_DIR = path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'db-store.json');
 
@@ -37,7 +37,7 @@ let store: DataStore = {
   projects: initialProjects,
   documents: initialDocuments,
   animeDrama: initialAnimeDrama,
-  comments: initialComments
+  comments: initialComments,
 };
 
 // Load saved data if available
@@ -47,18 +47,18 @@ try {
     const parsed = JSON.parse(raw);
     store = {
       profile: { ...initialProfile, ...(parsed.profile || {}) },
-      projects: Array.isArray(parsed.projects) ? parsed.projects : initialProjects,
-      documents: Array.isArray(parsed.documents) ? parsed.documents : initialDocuments,
-      animeDrama: Array.isArray(parsed.animeDrama) ? parsed.animeDrama : initialAnimeDrama,
-      comments: Array.isArray(parsed.comments) ? parsed.comments : initialComments,
+      projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+      documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+      animeDrama: Array.isArray(parsed.animeDrama) ? parsed.animeDrama : [],
+      comments: Array.isArray(parsed.comments) ? parsed.comments : [],
     };
-    console.log('✅ Loaded data store from local disk');
+    console.log('✅ Loaded clean data store from local disk');
   } else {
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
-    console.log('✅ Initialized new database store with seed data');
+    console.log('✅ Initialized clean empty database store');
   }
 } catch (err) {
-  console.warn('Could not read existing store file, using in-memory store:', err);
+  console.warn('Could not read existing store file, using clean in-memory store:', err);
 }
 
 function saveStore() {
@@ -69,51 +69,159 @@ function saveStore() {
   }
 }
 
-// MongoDB Connection configuration with provided credentials
+// -------------------------------------------------------------
+// MongoDB Connection & Real-Time Sync Engine
+// -------------------------------------------------------------
 let mongoConnected = false;
 let mongoDbInstance: any = null;
+let mongoClientInstance: any = null;
+let currentMongoUri = '';
 
 const MONGODB_USER = process.env.MONGODB_USER || 'bhardwajdev269_db_user';
 const MONGODB_PASS = process.env.MONGODB_PASS || 'nt8QnfaHAEc0vmd9';
-const MONGODB_CLUSTER = process.env.MONGODB_CLUSTER || 'cluster0.mongodb.net';
-
-const MONGODB_URI =
+const DEFAULT_MONGODB_URI =
   process.env.MONGODB_URI ||
-  `mongodb+srv://${MONGODB_USER}:${encodeURIComponent(MONGODB_PASS)}@${MONGODB_CLUSTER}/devtube_portfolio?retryWrites=true&w=majority`;
+  `mongodb+srv://${MONGODB_USER}:${encodeURIComponent(MONGODB_PASS)}@cluster0.mongodb.net/devtube_portfolio?retryWrites=true&w=majority`;
 
-// Async MongoDB initialization with graceful timeout fallback
-async function initMongo() {
+// Purges all sample data from MongoDB collections so user starts completely clean
+async function purgeSampleDataFromMongo(db: any) {
+  if (!db) return;
   try {
-    const { MongoClient } = await import('mongodb');
-    const client = new MongoClient(MONGODB_URI, {
-      serverSelectionTimeoutMS: 2500, // Quick timeout if Atlas cluster is offline
-    });
-    await client.connect();
-    mongoDbInstance = client.db('devtube_portfolio');
-    mongoConnected = true;
-    console.log(`✅ Successfully connected to MongoDB cluster for user "${MONGODB_USER}"`);
+    console.log('🗑️ Purging any existing sample data from MongoDB collections...');
+    const collectionsToPurge = ['projects', 'documents', 'anime_watch_history', 'animeDrama', 'comments'];
 
-    // Synchronize initial documents
-    const animeColl = mongoDbInstance.collection('anime_watch_history');
-    const count = await animeColl.countDocuments();
-    if (count === 0 && store.animeDrama.length > 0) {
-      await animeColl.insertMany(store.animeDrama);
-      console.log('✅ Seeded MongoDB anime_watch_history collection');
-    }
-  } catch (err: any) {
-    console.warn(`ℹ️ MongoDB cluster offline or restricted (${err?.message || 'timeout'}), using robust persistent disk store:`, STORE_FILE);
+    await Promise.all(
+      collectionsToPurge.map(async (collName) => {
+        try {
+          const coll = db.collection(collName);
+          const res = await coll.deleteMany({});
+          console.log(`🧹 Collection "${collName}": purged ${res.deletedCount || 0} sample documents.`);
+        } catch (e: any) {
+          console.warn(`Could not clear collection ${collName}:`, e?.message);
+        }
+      })
+    );
+
+    // Sync clean profile into MongoDB
+    const profileColl = db.collection('profile');
+    await profileColl.updateOne({}, { $set: store.profile }, { upsert: true });
+    console.log('✅ Clean profile synchronized with MongoDB');
+  } catch (err) {
+    console.error('Failed during MongoDB purge:', err);
   }
 }
 
-initMongo();
+// Connect to MongoDB Atlas with automatic fallback and sample data purge
+async function connectToMongo(uri: string) {
+  try {
+    const { MongoClient } = await import('mongodb');
+    if (mongoClientInstance) {
+      try {
+        await mongoClientInstance.close();
+      } catch {
+        // ignore
+      }
+    }
 
+    const client = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 3000,
+    });
+
+    await client.connect();
+    mongoClientInstance = client;
+    mongoDbInstance = client.db('devtube_portfolio');
+    mongoConnected = true;
+    currentMongoUri = uri;
+    console.log(`✅ Successfully connected to MongoDB for user "${MONGODB_USER}"`);
+
+    // Immediately purge all sample data from MongoDB on connect
+    await purgeSampleDataFromMongo(mongoDbInstance);
+
+    return { success: true };
+  } catch (err: any) {
+    mongoConnected = false;
+    mongoDbInstance = null;
+    console.warn(`ℹ️ MongoDB Atlas offline or DNS unresolved (${err?.message || 'timeout'}). Using persistent local database store.`);
+    return { success: false, error: err?.message };
+  }
+}
+
+// Initial MongoDB connect attempt
+connectToMongo(DEFAULT_MONGODB_URI);
+
+// -------------------------------------------------------------
+// Database Status & Manual Sync / Purge API
+// -------------------------------------------------------------
 app.get('/api/db/status', (req, res) => {
   res.json({
     success: true,
     mongoConnected,
     user: MONGODB_USER,
-    storage: mongoConnected ? 'MongoDB Cloud Atlas' : 'Local Persistent JSON Store',
+    storage: mongoConnected ? 'MongoDB Cloud Atlas (Synced)' : 'Persistent Local Database Store (Ready)',
     storePath: STORE_FILE,
+    stats: {
+      projects: store.projects.length,
+      documents: store.documents.length,
+      animeDrama: store.animeDrama.length,
+      comments: store.comments.length,
+    },
+  });
+});
+
+// Explicit endpoint to purge all data from MongoDB and front-end storage
+app.post('/api/db/clear-all', async (req, res) => {
+  try {
+    store.projects = [];
+    store.documents = [];
+    store.animeDrama = [];
+    store.comments = [];
+    saveStore();
+
+    if (mongoConnected && mongoDbInstance) {
+      await purgeSampleDataFromMongo(mongoDbInstance);
+    }
+
+    res.json({
+      success: true,
+      message: 'All sample data has been permanently deleted from MongoDB and local storage. Fresh sync active.',
+      stats: {
+        projects: 0,
+        documents: 0,
+        animeDrama: 0,
+        comments: 0,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Purge failed' });
+  }
+});
+
+// Dynamic MongoDB connection config endpoint
+app.post('/api/db/connect', async (req, res) => {
+  const { uri, cluster } = req.body;
+  let targetUri = uri;
+
+  if (!targetUri && cluster) {
+    targetUri = `mongodb+srv://${MONGODB_USER}:${encodeURIComponent(MONGODB_PASS)}@${cluster}/devtube_portfolio?retryWrites=true&w=majority`;
+  }
+
+  if (!targetUri) {
+    return res.status(400).json({ success: false, message: 'URI or cluster identifier required' });
+  }
+
+  const result = await connectToMongo(targetUri);
+  if (result.success) {
+    return res.json({
+      success: true,
+      message: 'Connected to MongoDB Atlas and purged all sample data. Ready for fresh live sync.',
+      mongoConnected: true,
+    });
+  }
+
+  return res.status(400).json({
+    success: false,
+    message: `Could not connect to MongoDB: ${result.error}`,
+    mongoConnected: false,
   });
 });
 
@@ -150,31 +258,63 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Profile API
+// Profile API (Synchronized with MongoDB)
 // -------------------------------------------------------------
-app.get('/api/profile', (req, res) => {
+app.get('/api/profile', async (req, res) => {
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      const profileColl = mongoDbInstance.collection('profile');
+      const doc = await profileColl.findOne({}, { projection: { _id: 0 } });
+      if (doc) {
+        store.profile = { ...store.profile, ...doc };
+        saveStore();
+      }
+    } catch (e) {
+      console.warn('Error reading profile from MongoDB:', e);
+    }
+  }
   res.json({ success: true, data: store.profile });
 });
 
-app.put('/api/profile', (req, res) => {
+app.put('/api/profile', async (req, res) => {
   store.profile = {
     ...store.profile,
     ...req.body,
   };
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      const profileColl = mongoDbInstance.collection('profile');
+      await profileColl.updateOne({}, { $set: store.profile }, { upsert: true });
+    } catch (e) {
+      console.warn('Error updating profile in MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, data: store.profile });
 });
 
 // -------------------------------------------------------------
-// Projects API (CRUD + Drag-and-Drop Reorder)
+// Projects API (CRUD + Drag-and-Drop Reorder + MongoDB Sync)
 // -------------------------------------------------------------
-app.get('/api/projects', (req, res) => {
-  // Sort projects by order ascending
+app.get('/api/projects', async (req, res) => {
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      const projectsColl = mongoDbInstance.collection('projects');
+      const docs = await projectsColl.find({}, { projection: { _id: 0 } }).sort({ order: 1 }).toArray();
+      store.projects = docs;
+      saveStore();
+    } catch (e) {
+      console.warn('Error fetching projects from MongoDB:', e);
+    }
+  }
+
   const sorted = [...store.projects].sort((a, b) => a.order - b.order);
   res.json({ success: true, data: sorted });
 });
 
-app.post('/api/projects', (req, res) => {
+app.post('/api/projects', async (req, res) => {
   const newProject = {
     id: `proj-${Date.now()}`,
     title: req.body.title || 'Untitled Project',
@@ -182,7 +322,7 @@ app.post('/api/projects', (req, res) => {
     description: req.body.description || '',
     thumbnail: req.body.thumbnail || '/src/assets/images/yt_thumb_cloud_platform_1793508227442.jpg',
     duration: req.body.duration || '12:00',
-    category: req.body.category || 'Full Stack',
+    category: req.body.category || 'General',
     views: '1 view',
     numericViews: 1,
     likes: 1,
@@ -198,26 +338,46 @@ app.post('/api/projects', (req, res) => {
 
   store.projects.push(newProject);
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('projects').insertOne({ ...newProject });
+    } catch (e) {
+      console.warn('Error saving project to MongoDB:', e);
+    }
+  }
+
   res.status(201).json({ success: true, data: newProject });
 });
 
-app.put('/api/projects/:id', (req, res) => {
+app.put('/api/projects/:id', async (req, res) => {
   const { id } = req.params;
   const index = store.projects.findIndex((p) => p.id === id);
   if (index === -1) {
     return res.status(404).json({ success: false, message: 'Project not found' });
   }
 
-  store.projects[index] = {
+  const updatedProject = {
     ...store.projects[index],
     ...req.body,
     id, // protect id
   };
+
+  store.projects[index] = updatedProject;
   saveStore();
-  res.json({ success: true, data: store.projects[index] });
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('projects').updateOne({ id }, { $set: updatedProject });
+    } catch (e) {
+      console.warn('Error updating project in MongoDB:', e);
+    }
+  }
+
+  res.json({ success: true, data: updatedProject });
 });
 
-app.delete('/api/projects/:id', (req, res) => {
+app.delete('/api/projects/:id', async (req, res) => {
   const { id } = req.params;
   const initialLen = store.projects.length;
   store.projects = store.projects.filter((p) => p.id !== id);
@@ -232,11 +392,24 @@ app.delete('/api/projects/:id', (req, res) => {
   });
 
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('projects').deleteOne({ id });
+      // update orders
+      for (const p of store.projects) {
+        await mongoDbInstance.collection('projects').updateOne({ id: p.id }, { $set: { order: p.order } });
+      }
+    } catch (e) {
+      console.warn('Error deleting project from MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, message: 'Project removed successfully' });
 });
 
 // Reorder projects route for drag and drop
-app.patch('/api/projects/reorder', (req, res) => {
+app.patch('/api/projects/reorder', async (req, res) => {
   const { orderedIds } = req.body;
   if (!Array.isArray(orderedIds)) {
     return res.status(400).json({ success: false, message: 'orderedIds array required' });
@@ -254,7 +427,6 @@ app.patch('/api/projects/reorder', (req, res) => {
     }
   });
 
-  // Append any projects not mentioned in orderedIds
   for (const remaining of projectMap.values()) {
     remaining.order = reordered.length + 1;
     reordered.push(remaining);
@@ -262,11 +434,22 @@ app.patch('/api/projects/reorder', (req, res) => {
 
   store.projects = reordered;
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      for (const p of store.projects) {
+        await mongoDbInstance.collection('projects').updateOne({ id: p.id }, { $set: { order: p.order } });
+      }
+    } catch (e) {
+      console.warn('Error reordering projects in MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, data: store.projects });
 });
 
 // Like project toggle
-app.post('/api/projects/:id/like', (req, res) => {
+app.post('/api/projects/:id/like', async (req, res) => {
   const { id } = req.params;
   const proj = store.projects.find((p) => p.id === id);
   if (!proj) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -274,21 +457,39 @@ app.post('/api/projects/:id/like', (req, res) => {
   proj.isLiked = !proj.isLiked;
   proj.likes += proj.isLiked ? 1 : -1;
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('projects').updateOne(
+        { id },
+        { $set: { likes: proj.likes, isLiked: proj.isLiked } }
+      );
+    } catch (e) {
+      console.warn('Error toggling like in MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, likes: proj.likes, isLiked: proj.isLiked });
 });
 
 // -------------------------------------------------------------
-// Secure Documents Vault API (Encrypted Storage)
+// Secure Documents Vault API (Encrypted Storage + MongoDB Sync)
 // -------------------------------------------------------------
-app.get('/api/documents', (req, res) => {
-  // Return metadata and encrypted hashes
+app.get('/api/documents', async (req, res) => {
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      const docs = await mongoDbInstance.collection('documents').find({}, { projection: { _id: 0 } }).toArray();
+      store.documents = docs;
+      saveStore();
+    } catch (e) {
+      console.warn('Error fetching documents from MongoDB:', e);
+    }
+  }
   res.json({ success: true, data: store.documents });
 });
 
-app.post('/api/documents', (req, res) => {
+app.post('/api/documents', async (req, res) => {
   const { title, type, identifierNumber, fileData, notes, mimeType } = req.body;
-
-  // Simulate secure AES-256-GCM encryption with cryptographic signature
   const cryptoHash = `AES256:${Buffer.from(`${title}-${Date.now()}-${Math.random()}`).toString('hex')}`;
 
   const newDoc = {
@@ -307,10 +508,19 @@ app.post('/api/documents', (req, res) => {
 
   store.documents.unshift(newDoc);
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('documents').insertOne({ ...newDoc });
+    } catch (e) {
+      console.warn('Error saving document to MongoDB:', e);
+    }
+  }
+
   res.status(201).json({ success: true, data: newDoc });
 });
 
-app.delete('/api/documents/:id', (req, res) => {
+app.delete('/api/documents/:id', async (req, res) => {
   const { id } = req.params;
   const initLen = store.documents.length;
   store.documents = store.documents.filter((d) => d.id !== id);
@@ -318,17 +528,35 @@ app.delete('/api/documents/:id', (req, res) => {
     return res.status(404).json({ success: false, message: 'Document not found' });
   }
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('documents').deleteOne({ id });
+    } catch (e) {
+      console.warn('Error deleting document from MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, message: 'Document purged from secure storage' });
 });
 
 // -------------------------------------------------------------
-// Private Watchlist / Anime & Drama Tracker API
+// Private Watchlist / Anime & Drama Tracker API (MongoDB Sync)
 // -------------------------------------------------------------
-app.get('/api/anime-tracker', (req, res) => {
+app.get('/api/anime-tracker', async (req, res) => {
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      const items = await mongoDbInstance.collection('anime_watch_history').find({}, { projection: { _id: 0 } }).toArray();
+      store.animeDrama = items;
+      saveStore();
+    } catch (e) {
+      console.warn('Error fetching anime history from MongoDB:', e);
+    }
+  }
   res.json({ success: true, data: store.animeDrama });
 });
 
-app.post('/api/anime-tracker', (req, res) => {
+app.post('/api/anime-tracker', async (req, res) => {
   const { title, originalTitle, category, status, totalEpisodes, watchedEpisodes, thumbnail, rating, description, genres, releaseYear } = req.body;
   const total = Number(totalEpisodes) || 12;
   const watched = Math.min(Number(watchedEpisodes) || 0, total);
@@ -348,25 +576,31 @@ app.post('/api/anime-tracker', (req, res) => {
     description: description || 'Tracked series in private dashboard.',
     genres: Array.isArray(genres) ? genres : ['Series'],
     releaseYear: releaseYear || '2025',
-    updatedAt: 'Just now'
+    updatedAt: 'Just now',
   };
 
   store.animeDrama.unshift(newItem);
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('anime_watch_history').insertOne({ ...newItem });
+    } catch (e) {
+      console.warn('Error saving anime item to MongoDB:', e);
+    }
+  }
+
   res.status(201).json({ success: true, data: newItem });
 });
 
-app.put('/api/anime-tracker/:id', (req, res) => {
+app.put('/api/anime-tracker/:id', async (req, res) => {
   const { id } = req.params;
   const idx = store.animeDrama.findIndex((item) => item.id === id);
   if (idx === -1) return res.status(404).json({ success: false, message: 'Item not found' });
 
   const existing = store.animeDrama[idx];
   const totalEpisodes = req.body.totalEpisodes !== undefined ? Number(req.body.totalEpisodes) : existing.totalEpisodes;
-  const watchedEpisodes = req.body.watchedEpisodes !== undefined ? Number(req.body.watchedEpisodes) : existing.watchedEpisodes;
-
   let watchedList = req.body.watchedList !== undefined ? req.body.watchedList : existing.watchedList;
-  // Ensure watchedList doesn't exceed totalEpisodes
   watchedList = watchedList.filter((ep: number) => ep <= totalEpisodes);
 
   const updated = {
@@ -376,16 +610,25 @@ app.put('/api/anime-tracker/:id', (req, res) => {
     watchedEpisodes: watchedList.length,
     watchedList,
     status: req.body.status || (watchedList.length >= totalEpisodes ? 'Completed' : watchedList.length > 0 ? 'Watching' : 'Upcoming'),
-    updatedAt: 'Just now'
+    updatedAt: 'Just now',
   };
 
   store.animeDrama[idx] = updated;
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('anime_watch_history').updateOne({ id }, { $set: updated });
+    } catch (e) {
+      console.warn('Error updating anime item in MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, data: updated });
 });
 
 // Toggle individual episode watched status (Turn green/red)
-app.patch('/api/anime-tracker/:id/episode', (req, res) => {
+app.patch('/api/anime-tracker/:id/episode', async (req, res) => {
   const { id } = req.params;
   const { episodeNumber } = req.body;
   const ep = Number(episodeNumber);
@@ -414,13 +657,22 @@ app.patch('/api/anime-tracker/:id/episode', (req, res) => {
   item.updatedAt = 'Just now';
 
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('anime_watch_history').updateOne({ id }, { $set: item });
+    } catch (e) {
+      console.warn('Error toggling episode in MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, data: item });
 });
 
 // Quick batch watch / reset
-app.patch('/api/anime-tracker/:id/batch-watch', (req, res) => {
+app.patch('/api/anime-tracker/:id/batch-watch', async (req, res) => {
   const { id } = req.params;
-  const { markAll } = req.body; // boolean
+  const { markAll } = req.body;
 
   const item = store.animeDrama.find((ad) => ad.id === id);
   if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
@@ -437,10 +689,19 @@ app.patch('/api/anime-tracker/:id/batch-watch', (req, res) => {
   item.updatedAt = 'Just now';
 
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('anime_watch_history').updateOne({ id }, { $set: item });
+    } catch (e) {
+      console.warn('Error batch watching in MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, data: item });
 });
 
-app.delete('/api/anime-tracker/:id', (req, res) => {
+app.delete('/api/anime-tracker/:id', async (req, res) => {
   const { id } = req.params;
   const initLen = store.animeDrama.length;
   store.animeDrama = store.animeDrama.filter((item) => item.id !== id);
@@ -448,19 +709,36 @@ app.delete('/api/anime-tracker/:id', (req, res) => {
     return res.status(404).json({ success: false, message: 'Item not found' });
   }
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('anime_watch_history').deleteOne({ id });
+    } catch (e) {
+      console.warn('Error deleting anime item from MongoDB:', e);
+    }
+  }
+
   res.json({ success: true, message: 'Series removed from watchlist' });
 });
 
 // -------------------------------------------------------------
-// Watch Page Comments API
+// Comments API (Synchronized with MongoDB)
 // -------------------------------------------------------------
-app.get('/api/comments/:projectId', (req, res) => {
+app.get('/api/comments/:projectId', async (req, res) => {
   const { projectId } = req.params;
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      const comments = await mongoDbInstance.collection('comments').find({ projectId }, { projection: { _id: 0 } }).toArray();
+      return res.json({ success: true, data: comments });
+    } catch (e) {
+      console.warn('Error fetching comments from MongoDB:', e);
+    }
+  }
   const filtered = store.comments.filter((c) => c.projectId === projectId);
   res.json({ success: true, data: filtered });
 });
 
-app.post('/api/comments', (req, res) => {
+app.post('/api/comments', async (req, res) => {
   const { projectId, author, text, avatar, isOwner } = req.body;
   const newComment = {
     id: `comm-${Date.now()}`,
@@ -470,11 +748,20 @@ app.post('/api/comments', (req, res) => {
     text: text || 'Great project!',
     timestamp: 'Just now',
     likes: 0,
-    isOwner: Boolean(isOwner)
+    isOwner: Boolean(isOwner),
   };
 
   store.comments.unshift(newComment);
   saveStore();
+
+  if (mongoConnected && mongoDbInstance) {
+    try {
+      await mongoDbInstance.collection('comments').insertOne({ ...newComment });
+    } catch (e) {
+      console.warn('Error saving comment to MongoDB:', e);
+    }
+  }
+
   res.status(201).json({ success: true, data: newComment });
 });
 

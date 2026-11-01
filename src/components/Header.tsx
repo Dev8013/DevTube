@@ -13,7 +13,8 @@ import {
   X,
   CheckCircle,
   Plus,
-  PlaySquare
+  PlaySquare,
+  Database
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -27,6 +28,7 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenUpload: () => void;
   onOpenEditProfile: () => void;
+  onOpenDbSync?: () => void;
   currentView: string;
   onNavigate: (view: string) => void;
 }
@@ -41,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenUpload,
   onOpenEditProfile,
+  onOpenDbSync,
   currentView,
   onNavigate,
 }) => {
@@ -314,6 +317,20 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Plus className="h-4 w-4 text-emerald-400" />
                   <span>Upload Showcase Project</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onOpenDbSync?.();
+                    setShowUserMenu(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-xs text-neutral-200 hover:bg-[#2b2b2b]"
+                >
+                  <Database className="h-4 w-4 text-emerald-400" />
+                  <div className="flex items-center justify-between flex-1">
+                    <span>Database & MongoDB Sync</span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Live</span>
+                  </div>
                 </button>
               </div>
 

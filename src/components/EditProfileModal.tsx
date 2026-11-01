@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, User, Briefcase, GraduationCap, Link2, Plus, Trash2, FileText, Upload, Download } from 'lucide-react';
+import { X, Check, User, Briefcase, GraduationCap, Link2, Plus, Trash2, FileText, Upload, Download, Camera, Image as ImageIcon } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface EditProfileModalProps {
@@ -17,7 +17,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'bio' | 'contact' | 'skills' | 'experience' | 'education' | 'resume'>('bio');
 
-  // Bio state
+  // Bio & Avatar state
+  const [avatar, setAvatar] = useState('');
+  const avatarFileRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
   const [tagline, setTagline] = useState('');
@@ -54,6 +56,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
   useEffect(() => {
     if (profile) {
+      setAvatar(profile.avatar || '/src/assets/images/yt_dev_avatar_1793508225400.jpg');
       setName(profile.name || 'Dev Bhardwaj');
       setHandle(profile.handle || '@Onicha69');
       setTagline(profile.tagline || '');
@@ -80,6 +83,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   }, [profile, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAddExperience = () => {
     const newExp = {
@@ -178,6 +193,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       .filter(Boolean);
 
     await onSave({
+      avatar,
       name,
       handle,
       tagline,
@@ -294,6 +310,63 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           {/* TAB 1: BIO & BRAND */}
           {activeTab === 'bio' && (
             <div className="space-y-4">
+              {/* Profile Picture (Avatar) Upload Card */}
+              <div className="rounded-xl border border-neutral-800 bg-[#161616] p-4 flex flex-col sm:flex-row items-center gap-4">
+                <input
+                  type="file"
+                  ref={avatarFileRef}
+                  onChange={handleAvatarFileUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <div className="relative group shrink-0">
+                  <img
+                    src={avatar || '/src/assets/images/yt_dev_avatar_1793508225400.jpg'}
+                    alt="Profile Avatar Preview"
+                    referrerPolicy="no-referrer"
+                    className="h-20 w-20 rounded-full object-cover ring-2 ring-neutral-700 bg-[#242424]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarFileRef.current?.click()}
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity text-white cursor-pointer"
+                    title="Change Profile Picture"
+                  >
+                    <Camera className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="flex-1 text-center sm:text-left">
+                  <h4 className="text-xs font-bold text-white flex items-center justify-center sm:justify-start gap-1.5">
+                    <Camera className="h-3.5 w-3.5 text-blue-400" />
+                    <span>Channel Profile Picture</span>
+                  </h4>
+                  <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+                    Upload your custom avatar portrait from your computer or phone (JPG, PNG, WebP).
+                  </p>
+
+                  <div className="mt-2.5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="flex items-center gap-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Upload Profile Picture</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAvatar('/src/assets/images/yt_dev_avatar_1793508225400.jpg')}
+                      className="rounded-lg border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 px-3 py-1.5 text-xs text-neutral-300 transition-colors cursor-pointer"
+                    >
+                      Reset Default
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-300 mb-1">Full Name</label>

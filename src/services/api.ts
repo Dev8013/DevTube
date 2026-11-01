@@ -3,6 +3,19 @@ import { initialProfile, initialProjects, initialDocuments, initialAnimeDrama, i
 
 // Storage keys for local offline fallback
 const LS_PREFIX = 'devtube_';
+
+// Purge any outdated sample items from localStorage
+try {
+  const cachedProjects = localStorage.getItem(LS_PREFIX + 'projects');
+  if (cachedProjects && (cachedProjects.includes('Cloud Infrastructure Command') || cachedProjects.includes('sample-') || cachedProjects.includes('Autonomous Multi-Agent'))) {
+    localStorage.removeItem(LS_PREFIX + 'projects');
+    localStorage.removeItem(LS_PREFIX + 'documents');
+    localStorage.removeItem(LS_PREFIX + 'animeDrama');
+  }
+} catch {
+  // ignore
+}
+
 const getLS = <T>(key: string, fallback: T): T => {
   try {
     const val = localStorage.getItem(LS_PREFIX + key);
@@ -488,5 +501,50 @@ export const api = {
     const curr = getLS<CommentItem[]>('comments', initialComments);
     setLS('comments', [newComment, ...curr]);
     return newComment;
+  },
+
+  // -------------------------------------------------------------
+  // MongoDB & Storage Management
+  // -------------------------------------------------------------
+  async getDbStatus(): Promise<{ success: boolean; mongoConnected: boolean; storage: string; user?: string; stats?: any }> {
+    try {
+      const res = await fetch('/api/db/status');
+      return await res.json();
+    } catch {
+      return { success: false, mongoConnected: false, storage: 'Persistent Storage' };
+    }
+  },
+
+  async clearAllData(): Promise<{ success: boolean; message: string; stats?: any }> {
+    try {
+      const res = await fetch('/api/db/clear-all', { method: 'POST' });
+      const json = await res.json();
+      localStorage.removeItem(LS_PREFIX + 'projects');
+      localStorage.removeItem(LS_PREFIX + 'documents');
+      localStorage.removeItem(LS_PREFIX + 'animeDrama');
+      localStorage.removeItem(LS_PREFIX + 'comments');
+      return json;
+    } catch (e: any) {
+      localStorage.removeItem(LS_PREFIX + 'projects');
+      localStorage.removeItem(LS_PREFIX + 'documents');
+      localStorage.removeItem(LS_PREFIX + 'animeDrama');
+      localStorage.removeItem(LS_PREFIX + 'comments');
+      return { success: true, message: 'All local and database sample data purged.' };
+    }
+  },
+
+  async connectMongo(uriOrCluster: string): Promise<{ success: boolean; message: string; mongoConnected?: boolean }> {
+    try {
+      const isCluster = !uriOrCluster.includes('://');
+      const body = isCluster ? { cluster: uriOrCluster } : { uri: uriOrCluster };
+      const res = await fetch('/api/db/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e?.message || 'Connection failed' };
+    }
   },
 };
