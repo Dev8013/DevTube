@@ -226,16 +226,30 @@ CERTIFICATIONS & CREDENTIALS
                 {/* Technical Skills */}
                 <div className="rounded-2xl border border-neutral-800 bg-[#161616] p-6 shadow-sm">
                   <h3 className="text-base font-bold text-white mb-4">Core Technical Proficiencies</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="rounded-lg bg-[#242424] px-3 py-1.5 text-xs font-semibold text-neutral-200 border border-neutral-700/60"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
+                  {profile.skills && profile.skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-lg bg-[#242424] px-3 py-1.5 text-xs font-semibold text-neutral-200 border border-neutral-700/60"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-neutral-800 p-4 text-center">
+                      <p className="text-xs text-neutral-400">No skills added yet.</p>
+                      {isAdmin && (
+                        <button
+                          onClick={onOpenEditProfile}
+                          className="mt-2 text-xs text-blue-400 hover:underline"
+                        >
+                          + Add your skills
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Engineering Highlights */}
@@ -356,39 +370,57 @@ CERTIFICATIONS & CREDENTIALS
                 )}
               </div>
 
-              <div className="space-y-4">
-                {profile.experience.map((exp, idx) => (
-                  <div
-                    key={exp.id || idx}
-                    className="rounded-2xl border border-neutral-800 bg-[#161616] p-6 shadow-sm hover:border-neutral-700 transition-colors"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-800/80">
-                      <div>
-                        <h4 className="text-base font-bold text-white">{exp.role}</h4>
-                        <p className="text-xs font-semibold text-blue-400">{exp.company}</p>
-                      </div>
-                      <span className="rounded bg-neutral-800 px-3 py-1 text-xs font-mono text-neutral-300 self-start sm:self-center">
-                        {exp.period}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-xs text-neutral-300 leading-relaxed whitespace-pre-line">
-                      {exp.description}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-neutral-800/60">
-                      {exp.tech.map((t) => (
-                        <span
-                          key={t}
-                          className="rounded bg-neutral-800 px-2 py-0.5 text-[11px] font-mono text-neutral-300"
-                        >
-                          {t}
+              {profile.experience && profile.experience.length > 0 ? (
+                <div className="space-y-4">
+                  {profile.experience.map((exp, idx) => (
+                    <div
+                      key={exp.id || idx}
+                      className="rounded-2xl border border-neutral-800 bg-[#161616] p-6 shadow-sm hover:border-neutral-700 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-800/80">
+                        <div>
+                          <h4 className="text-base font-bold text-white">{exp.role}</h4>
+                          <p className="text-xs font-semibold text-blue-400">{exp.company}</p>
+                        </div>
+                        <span className="rounded bg-neutral-800 px-3 py-1 text-xs font-mono text-neutral-300 self-start sm:self-center">
+                          {exp.period}
                         </span>
-                      ))}
+                      </div>
+
+                      <p className="mt-3 text-xs text-neutral-300 leading-relaxed whitespace-pre-line">
+                        {exp.description}
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-neutral-800/60">
+                        {exp.tech.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded bg-neutral-800 px-2 py-0.5 text-[11px] font-mono text-neutral-300"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-neutral-800 bg-[#141414]/60 p-8 text-center">
+                  <Briefcase className="h-8 w-8 text-neutral-500 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-white">No Experience Listed Yet</p>
+                  <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+                    Add your engineering positions, companies, and technologies directly using the profile customizer.
+                  </p>
+                  {isAdmin && (
+                    <button
+                      onClick={onOpenEditProfile}
+                      className="mt-4 rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                    >
+                      + Add Work Experience
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -411,39 +443,57 @@ CERTIFICATIONS & CREDENTIALS
                 )}
               </div>
 
-              <div className="space-y-4">
-                {profile.education.map((edu, idx) => (
-                  <div
-                    key={edu.id || idx}
-                    className="rounded-2xl border border-neutral-800 bg-[#161616] p-6 shadow-sm hover:border-neutral-700 transition-colors"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-800/80">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
-                          <GraduationCap className="h-5 w-5" />
+              {profile.education && profile.education.length > 0 ? (
+                <div className="space-y-4">
+                  {profile.education.map((edu, idx) => (
+                    <div
+                      key={edu.id || idx}
+                      className="rounded-2xl border border-neutral-800 bg-[#161616] p-6 shadow-sm hover:border-neutral-700 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-800/80">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                            <GraduationCap className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-base font-bold text-white">{edu.degree}</h4>
+                            <p className="text-xs text-neutral-400">{edu.institution}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-base font-bold text-white">{edu.degree}</h4>
-                          <p className="text-xs text-neutral-400">{edu.institution}</p>
+
+                        <div className="flex items-center gap-3 self-start sm:self-center">
+                          <span className="rounded bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 font-bold px-2.5 py-1 text-xs">
+                            {edu.score}
+                          </span>
+                          <span className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-mono text-neutral-300">
+                            {edu.year}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 self-start sm:self-center">
-                        <span className="rounded bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 font-bold px-2.5 py-1 text-xs">
-                          {edu.score}
-                        </span>
-                        <span className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-mono text-neutral-300">
-                          {edu.year}
-                        </span>
-                      </div>
+                      <p className="mt-3 text-xs text-neutral-300 leading-relaxed">
+                        {edu.highlights}
+                      </p>
                     </div>
-
-                    <p className="mt-3 text-xs text-neutral-300 leading-relaxed">
-                      {edu.highlights}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-neutral-800 bg-[#141414]/60 p-8 text-center">
+                  <GraduationCap className="h-8 w-8 text-neutral-500 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-white">No Education Listed Yet</p>
+                  <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+                    Add your university degrees, colleges, scores, and coursework details.
+                  </p>
+                  {isAdmin && (
+                    <button
+                      onClick={onOpenEditProfile}
+                      className="mt-4 rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                    >
+                      + Add Education Details
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

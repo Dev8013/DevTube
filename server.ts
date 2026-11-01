@@ -47,10 +47,10 @@ try {
     const parsed = JSON.parse(raw);
     store = {
       profile: { ...initialProfile, ...(parsed.profile || {}) },
-      projects: parsed.projects && parsed.projects.length ? parsed.projects : initialProjects,
-      documents: parsed.documents && parsed.documents.length ? parsed.documents : initialDocuments,
-      animeDrama: parsed.animeDrama && parsed.animeDrama.length ? parsed.animeDrama : initialAnimeDrama,
-      comments: parsed.comments && parsed.comments.length ? parsed.comments : initialComments,
+      projects: Array.isArray(parsed.projects) ? parsed.projects : initialProjects,
+      documents: Array.isArray(parsed.documents) ? parsed.documents : initialDocuments,
+      animeDrama: Array.isArray(parsed.animeDrama) ? parsed.animeDrama : initialAnimeDrama,
+      comments: Array.isArray(parsed.comments) ? parsed.comments : initialComments,
     };
     console.log('✅ Loaded data store from local disk');
   } else {

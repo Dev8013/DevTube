@@ -146,9 +146,27 @@ export const DocumentsVault: React.FC<DocumentsVaultProps> = ({
       </div>
 
       {/* Documents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredDocs.map((doc) => {
-          const isUnlocked = unlockedDocIds.has(doc.id);
+      {filteredDocs.length === 0 ? (
+        <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-800 bg-[#161616]/70 p-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-3">
+            <Lock className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-bold text-white">Vault is Empty</h3>
+          <p className="text-xs text-neutral-400 mt-1 max-w-md leading-relaxed">
+            All sample documents have been removed. You can now securely store your real government credentials (Aadhaar, PAN cards) and certifications with AES-256 encryption.
+          </p>
+          <button
+            onClick={onOpenUpload}
+            className="mt-5 flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-5 py-2.5 text-xs font-bold text-black transition-colors shadow-lg cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Upload Your First Document</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredDocs.map((doc) => {
+            const isUnlocked = unlockedDocIds.has(doc.id);
 
           return (
             <div
@@ -257,7 +275,8 @@ export const DocumentsVault: React.FC<DocumentsVaultProps> = ({
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -173,11 +173,29 @@ export const AnimeTrackerView: React.FC<AnimeTrackerViewProps> = ({
       </div>
 
       {/* YouTube Style Grid */}
-      <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredItems.map((item) => {
-          const progressPercent = Math.round((item.watchedEpisodes / (item.totalEpisodes || 1)) * 100);
+      {filteredItems.length === 0 ? (
+        <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-800 bg-[#161616]/60 p-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600/10 text-red-500 border border-red-500/20 mb-3">
+            <Film className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-bold text-white">Your Watchlist is Ready</h3>
+          <p className="text-xs text-neutral-400 mt-1 max-w-md leading-relaxed">
+            All sample anime and dramas have been cleared. Click "+ Add New Series" to start tracking your Anime, Chinese Drama, Korean Drama, or TV shows with interactive episode progress.
+          </p>
+          <button
+            onClick={onOpenAddModal}
+            className="mt-5 flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 px-5 py-2.5 text-xs font-bold text-white transition-colors shadow-lg cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Your First Series</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredItems.map((item) => {
+            const progressPercent = Math.round((item.watchedEpisodes / (item.totalEpisodes || 1)) * 100);
 
-          return (
+            return (
             <div
               key={item.id}
               onClick={() => setActiveItem(item)}
@@ -298,7 +316,8 @@ export const AnimeTrackerView: React.FC<AnimeTrackerViewProps> = ({
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Interactive Episode Tracker Modal */}
       {currentActive && (

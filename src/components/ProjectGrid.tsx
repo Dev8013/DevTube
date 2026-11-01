@@ -154,20 +154,31 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => onOpenProject(projects[0])}
-                className="rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black hover:bg-neutral-200 transition-colors shadow-sm"
-              >
-                Watch Top Project
-              </button>
-              <a
-                href={profile.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full border border-neutral-700 bg-neutral-900/80 px-5 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors"
-              >
-                Explore GitHub
-              </a>
+              {projects.length > 0 ? (
+                <button
+                  onClick={() => onOpenProject(projects[0])}
+                  className="rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black hover:bg-neutral-200 transition-colors shadow-sm cursor-pointer"
+                >
+                  View Featured Project
+                </button>
+              ) : (
+                <button
+                  onClick={onOpenUpload}
+                  className="rounded-full bg-red-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-colors shadow-sm cursor-pointer"
+                >
+                  Upload Your First Project
+                </button>
+              )}
+              {profile.github && (
+                <a
+                  href={profile.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-neutral-700 bg-neutral-900/80 px-5 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors"
+                >
+                  Explore GitHub
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -175,23 +186,21 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
 
       {/* Projects YouTube Grid */}
       {filteredProjects.length === 0 ? (
-        <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#272727] p-8 text-center">
-          <Filter className="h-10 w-10 text-neutral-500 mb-3" />
-          <h3 className="text-base font-semibold text-white">No projects found</h3>
-          <p className="text-xs text-neutral-400 mt-1 max-w-sm">
-            {searchTerm
-              ? `No projects matched "${searchTerm}". Try another keyword or browse all categories.`
-              : `No projects found in category "${selectedCategory}".`}
+        <div className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#272727] p-8 text-center bg-[#131313]/60">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-400 mb-3">
+            <Plus className="h-7 w-7 text-red-500" />
+          </div>
+          <h3 className="text-base font-bold text-white">No Projects Uploaded Yet</h3>
+          <p className="text-xs text-neutral-400 mt-1 max-w-md leading-relaxed">
+            All sample data has been cleared. You can now showcase your real projects by clicking "Upload Project" to add your title, category, custom thumbnail, and deployment links.
           </p>
-          {isAdmin && (
-            <button
-              onClick={onOpenUpload}
-              className="mt-4 flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Upload Project to this Category</span>
-            </button>
-          )}
+          <button
+            onClick={onOpenUpload}
+            className="mt-5 flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-500 px-5 py-2.5 text-xs font-bold text-white transition-colors shadow-lg cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Upload Your First Project</span>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
