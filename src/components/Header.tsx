@@ -14,7 +14,8 @@ import {
   CheckCircle,
   Plus,
   PlaySquare,
-  Database
+  Database,
+  FileText
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -270,6 +271,17 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <User className="h-4 w-4 text-neutral-400" />
                   <span>Your Channel & Profile</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onNavigate('resume');
+                    setShowUserMenu(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-xs text-neutral-200 hover:bg-[#2b2b2b]"
+                >
+                  <FileText className="h-4 w-4 text-emerald-400" />
+                  <span>Resume & CV</span>
                 </button>
 
                 <button

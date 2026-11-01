@@ -21,6 +21,7 @@ import {
   Camera
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { ResumeViewerModal, DigitalResumeDocument } from './ResumeViewerModal';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -38,6 +39,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   activeSection = 'about',
 }) => {
   const [activeTab, setActiveTab] = useState<'about' | 'experience' | 'education' | 'resume'>('about');
+  const [isResumeViewerOpen, setIsResumeViewerOpen] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
@@ -250,8 +252,26 @@ ${
             </div>
           </div>
 
-          {/* Action CTAs: Upload Resume & Customize Channel */}
+          {/* Action CTAs: View Resume, Download, Upload & Customize Channel */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => setIsResumeViewerOpen(true)}
+              className="flex items-center gap-1.5 rounded-full bg-white hover:bg-neutral-200 px-4 py-2 text-xs font-bold text-black transition-colors shadow-sm cursor-pointer"
+              title="View and preview resume on screen"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>View Resume</span>
+            </button>
+
+            <button
+              onClick={handleDownloadResume}
+              className="flex items-center gap-1.5 rounded-full bg-[#272727] hover:bg-[#383838] px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
+              title="Download resume file"
+            >
+              <Download className="h-3.5 w-3.5 text-neutral-300" />
+              <span>Download</span>
+            </button>
+
             {isAdmin && (
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -260,17 +280,9 @@ ${
                 title="Upload Resume PDF from device"
               >
                 <Upload className="h-3.5 w-3.5 text-neutral-300" />
-                <span>{profile.resumeData ? 'Replace Resume' : 'Upload Resume'}</span>
+                <span>{profile.resumeData ? 'Replace PDF' : 'Upload PDF'}</span>
               </button>
             )}
-
-            <button
-              onClick={handleDownloadResume}
-              className="flex items-center gap-1.5 rounded-full bg-white hover:bg-neutral-200 px-4 py-2 text-xs font-bold text-black transition-colors shadow-sm cursor-pointer"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Download Resume</span>
-            </button>
 
             {isAdmin && (
               <button
@@ -278,7 +290,7 @@ ${
                 className="flex items-center gap-1.5 rounded-full bg-[#272727] hover:bg-[#383838] px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
               >
                 <Edit className="h-3.5 w-3.5" />
-                <span>Customize Channel / Edit Bio</span>
+                <span>Customize Channel</span>
               </button>
             )}
           </div>
@@ -475,88 +487,177 @@ ${
           {/* TAB 2: RESUME & CV (WITH UPLOAD OPTION) */}
           {activeTab === 'resume' && (
             <div className="max-w-4xl space-y-6">
-              {/* Resume Upload Card */}
-              <div className="rounded-2xl border border-[#222222] bg-[#141414] p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#222222]">
-                  <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <FileCheck className="h-5 w-5 text-neutral-300" />
-                      <span>Resume Document</span>
-                    </h3>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      {profile.resumeData
-                        ? 'Your uploaded official resume file is ready for download and preview.'
-                        : 'Upload your resume PDF from your device.'}
-                    </p>
-                  </div>
+              {/* Resume Upload & Viewer Section */}
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[#222222] bg-[#141414] p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#222222]">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <FileCheck className="h-5 w-5 text-neutral-300" />
+                        <span>Resume Document & Credentials</span>
+                      </h3>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        {profile.resumeData
+                          ? 'Your uploaded resume is ready for instant viewing, downloading, and printing.'
+                          : 'Interactive curriculum vitae with career history, education, and verified skills.'}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    {isAdmin && (
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-1.5 rounded-xl bg-white hover:bg-neutral-200 px-4 py-2 text-xs font-bold text-black transition-colors cursor-pointer"
+                        onClick={() => setIsResumeViewerOpen(true)}
+                        className="flex items-center gap-1.5 rounded-xl bg-white hover:bg-neutral-200 px-4 py-2 text-xs font-bold text-black transition-colors cursor-pointer shadow-sm"
+                        title="Open interactive resume viewer"
                       >
-                        <Upload className="h-4 w-4" />
-                        <span>{profile.resumeData ? 'Upload New Version' : 'Upload Resume (PDF)'}</span>
+                        <Eye className="h-4 w-4" />
+                        <span>View Resume</span>
                       </button>
-                    )}
 
-                    {profile.resumeData && (
                       <button
                         onClick={handleDownloadResume}
                         className="flex items-center gap-1.5 rounded-xl bg-[#272727] hover:bg-[#383838] px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
+                        title="Download resume file"
                       >
                         <Download className="h-4 w-4" />
                         <span>Download</span>
                       </button>
-                    )}
-                  </div>
-                </div>
 
-                {/* Uploaded File Details or Empty Dropzone */}
-                {profile.resumeData ? (
-                  <div className="mt-5 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#272727] text-white shrink-0">
-                        <FileText className="h-6 w-6 text-neutral-200" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-white">
-                          {profile.resumeFileName || 'Dev_Bhardwaj_Resume.pdf'}
-                        </p>
-                        <p className="text-xs text-neutral-400 mt-0.5">
-                          {profile.resumeFileSize || 'PDF Document'} • Uploaded on {profile.resumeUploadedAt || 'Recently'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
                       {isAdmin && (
                         <button
-                          onClick={handleRemoveResume}
-                          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-red-400 p-2 rounded-lg hover:bg-[#252525] transition-colors cursor-pointer"
-                          title="Remove Resume"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-1.5 rounded-xl bg-[#272727] hover:bg-[#383838] px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
                         >
-                          <Trash2 className="h-4 w-4" />
-                          <span>Remove</span>
+                          <Upload className="h-4 w-4" />
+                          <span>{profile.resumeData ? 'Replace PDF' : 'Upload PDF'}</span>
                         </button>
                       )}
                     </div>
                   </div>
+
+                  {/* Uploaded File Details or Empty Dropzone */}
+                  {profile.resumeData ? (
+                    <div
+                      onClick={() => setIsResumeViewerOpen(true)}
+                      className="mt-5 rounded-xl bg-[#1c1c1c] hover:bg-[#222222] border border-[#2a2a2a] hover:border-neutral-600 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer transition-all group"
+                      title="Click to view resume in full screen"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#272727] text-white shrink-0 group-hover:bg-[#333333] transition-colors">
+                          <FileText className="h-6 w-6 text-neutral-200" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                              {profile.resumeFileName || 'Dev_Bhardwaj_Resume.pdf'}
+                            </p>
+                            <span className="text-[10px] text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 px-2 py-0.5 rounded-full">
+                              Click to View
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-400 mt-0.5">
+                            {profile.resumeFileSize || 'PDF Document'} • Uploaded on {profile.resumeUploadedAt || 'Recently'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setIsResumeViewerOpen(true)}
+                          className="flex items-center gap-1 text-xs text-neutral-300 hover:text-white px-3 py-1.5 rounded-lg bg-[#272727] hover:bg-[#383838] transition-colors cursor-pointer"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Preview</span>
+                        </button>
+
+                        <button
+                          onClick={handleDownloadResume}
+                          className="flex items-center gap-1 text-xs text-neutral-300 hover:text-white px-3 py-1.5 rounded-lg bg-[#272727] hover:bg-[#383838] transition-colors cursor-pointer"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>Download</span>
+                        </button>
+
+                        {isAdmin && (
+                          <button
+                            onClick={handleRemoveResume}
+                            className="flex items-center gap-1 text-xs text-neutral-400 hover:text-red-400 p-2 rounded-lg hover:bg-[#252525] transition-colors cursor-pointer"
+                            title="Remove Resume"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => isAdmin && fileInputRef.current?.click()}
+                      className={`mt-5 rounded-xl border border-dashed border-[#2e2e2e] bg-[#181818]/50 p-8 text-center transition-colors ${
+                        isAdmin ? 'hover:border-neutral-500 hover:bg-[#181818] cursor-pointer' : ''
+                      }`}
+                    >
+                      <Upload className="h-8 w-8 text-neutral-400 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-white">No PDF Resume Uploaded Yet</p>
+                      <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+                        {isAdmin
+                          ? 'Click here to upload your custom PDF resume from your computer, or view your digital CV below.'
+                          : 'Viewing verified digital curriculum vitae below.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Embedded Live Resume Viewer */}
+                {profile.resumeData ? (
+                  <div className="rounded-2xl border border-[#222222] bg-[#141414] overflow-hidden shadow-xl">
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#181818] border-b border-[#262626]">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-neutral-300">
+                        <FileText className="h-4 w-4 text-neutral-400" />
+                        <span>Interactive PDF Document Viewer</span>
+                        <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-2 py-0.5 rounded-full font-mono">
+                          Live On-Screen
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsResumeViewerOpen(true)}
+                          className="flex items-center gap-1.5 text-xs text-neutral-200 hover:text-white bg-[#262626] hover:bg-[#333333] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Fullscreen Modal</span>
+                        </button>
+                        <button
+                          onClick={handleDownloadResume}
+                          className="flex items-center gap-1.5 text-xs text-neutral-200 hover:text-white bg-[#262626] hover:bg-[#333333] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-[750px] w-full bg-neutral-900">
+                      <iframe
+                        src={profile.resumeData}
+                        title="Dev Bhardwaj Resume Preview"
+                        className="w-full h-full border-0 bg-neutral-900"
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <div
-                    onClick={() => isAdmin && fileInputRef.current?.click()}
-                    className={`mt-5 rounded-xl border border-dashed border-[#2e2e2e] bg-[#181818]/50 p-8 text-center transition-colors ${
-                      isAdmin ? 'hover:border-neutral-500 hover:bg-[#181818] cursor-pointer' : ''
-                    }`}
-                  >
-                    <Upload className="h-8 w-8 text-neutral-400 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-white">No Resume Uploaded Yet</p>
-                    <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-                      {isAdmin
-                        ? 'Click here or use the button above to upload your PDF resume from your device.'
-                        : 'The owner has not uploaded a resume PDF yet.'}
-                    </p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2 text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                        <FileText className="h-4 w-4 text-neutral-400" />
+                        <span>Curriculum Vitae Preview</span>
+                      </div>
+                      <button
+                        onClick={() => setIsResumeViewerOpen(true)}
+                        className="flex items-center gap-1.5 text-xs text-neutral-200 hover:text-white bg-[#262626] hover:bg-[#333333] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Pop-out Viewer</span>
+                      </button>
+                    </div>
+                    <DigitalResumeDocument profile={profile} />
                   </div>
                 )}
               </div>
@@ -718,6 +819,16 @@ ${
           )}
         </div>
       </div>
+
+      {/* Interactive Resume Viewer Modal */}
+      <ResumeViewerModal
+        isOpen={isResumeViewerOpen}
+        onClose={() => setIsResumeViewerOpen(false)}
+        profile={profile}
+        onDownload={handleDownloadResume}
+        onUploadNew={() => fileInputRef.current?.click()}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };
