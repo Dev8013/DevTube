@@ -1,0 +1,8 @@
+{
+  "name": "Dev Bhardwaj - YouTube Portfolio",
+  "description": "YouTube-themed developer portfolio featuring drag-and-drop project showcase, editable bio & credentials, secure encrypted document vault, and private anime & drama watchlist tracker.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
