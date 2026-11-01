@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Check, User, Briefcase, GraduationCap, Link2, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Check, User, Briefcase, GraduationCap, Link2, Plus, Trash2, FileText, Upload, Download } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface EditProfileModalProps {
@@ -15,7 +15,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   profile,
   onSave,
 }) => {
-  const [activeTab, setActiveTab] = useState<'bio' | 'contact' | 'skills' | 'experience' | 'education'>('bio');
+  const [activeTab, setActiveTab] = useState<'bio' | 'contact' | 'skills' | 'experience' | 'education' | 'resume'>('bio');
 
   // Bio state
   const [name, setName] = useState('');
@@ -23,7 +23,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [tagline, setTagline] = useState('');
   const [bio, setBio] = useState('');
   const [portfolioStatus, setPortfolioStatus] = useState('');
-  const [subscribers, setSubscribers] = useState('');
+
+  // Resume state
+  const [resumeUrl, setResumeUrl] = useState('');
+  const [resumeFileName, setResumeFileName] = useState('');
+  const [resumeFileSize, setResumeFileSize] = useState('');
+  const [resumeUploadedAt, setResumeUploadedAt] = useState('');
+  const [resumeData, setResumeData] = useState('');
+  const [resumeNotice, setResumeNotice] = useState<string | null>(null);
+  const resumeFileRef = useRef<HTMLInputElement | null>(null);
 
   // Contact state
   const [email, setEmail] = useState('');
@@ -51,7 +59,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setTagline(profile.tagline || '');
       setBio(profile.bio || '');
       setPortfolioStatus(profile.portfolioStatus || '');
-      setSubscribers(profile.subscribers || '142K subscribers');
+
+      setResumeUrl(profile.resumeUrl || '');
+      setResumeFileName(profile.resumeFileName || '');
+      setResumeFileSize(profile.resumeFileSize || '');
+      setResumeUploadedAt(profile.resumeUploadedAt || '');
+      setResumeData(profile.resumeData || '');
 
       setEmail(profile.email || 'bhardwajdev269@gmail.com');
       setPhone(profile.phone || '+91 98712 34567');
@@ -121,6 +134,40 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     );
   };
 
+  const handleResumeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fileName = file.name;
+    const fileSize = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+    const uploadDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Data = reader.result as string;
+      setResumeData(base64Data);
+      setResumeFileName(fileName);
+      setResumeFileSize(fileSize);
+      setResumeUploadedAt(uploadDate);
+      setResumeNotice(`Resume "${fileName}" ready to save!`);
+      setTimeout(() => setResumeNotice(null), 4000);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveResume = () => {
+    setResumeData('');
+    setResumeFileName('');
+    setResumeFileSize('');
+    setResumeUploadedAt('');
+    setResumeUrl('');
+    setResumeNotice('Resume cleared.');
+    setTimeout(() => setResumeNotice(null), 3000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -136,7 +183,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       tagline,
       bio,
       portfolioStatus,
-      subscribers,
       email,
       phone,
       location,
@@ -146,6 +192,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       skills,
       experience,
       education,
+      resumeUrl,
+      resumeFileName,
+      resumeFileSize,
+      resumeUploadedAt,
+      resumeData,
     });
 
     setIsSaving(false);
@@ -182,6 +233,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           >
             <User className="h-3.5 w-3.5" />
             <span>Bio & Brand</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('resume')}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'resume' ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span>Resume (Upload PDF)</span>
           </button>
 
           <button
@@ -274,26 +336,99 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1">Portfolio Status</label>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">Portfolio & Availability Status</label>
+                <input
+                  type="text"
+                  value={portfolioStatus}
+                  onChange={(e) => setPortfolioStatus(e.target.value)}
+                  placeholder="e.g. Open to Senior Full Stack & Cloud Roles"
+                  className="w-full rounded-lg border border-neutral-700 bg-[#121212] px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB: RESUME (UPLOAD PDF) */}
+          {activeTab === 'resume' && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-neutral-800 bg-[#141414] p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-emerald-400" />
+                  <h4 className="text-xs font-bold text-white">Direct Resume Upload (PDF)</h4>
+                </div>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Upload your official resume in PDF format. Visitors and recruiters can view and download your verified PDF directly from your channel profile and resume tab.
+                </p>
+
+                {resumeNotice && (
+                  <div className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-400 flex items-center gap-2">
+                    <Check className="h-4 w-4 shrink-0" />
+                    <span>{resumeNotice}</span>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
                   <input
-                    type="text"
-                    value={portfolioStatus}
-                    onChange={(e) => setPortfolioStatus(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-700 bg-[#121212] px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+                    type="file"
+                    ref={resumeFileRef}
+                    onChange={handleResumeFileUpload}
+                    accept=".pdf,application/pdf"
+                    className="hidden"
                   />
+
+                  <button
+                    type="button"
+                    onClick={() => resumeFileRef.current?.click()}
+                    className="flex items-center gap-2 rounded-lg bg-white text-black hover:bg-neutral-200 px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>{resumeData ? 'Replace Resume PDF' : 'Upload Resume PDF'}</span>
+                  </button>
+
+                  {resumeData && (
+                    <>
+                      <a
+                        href={resumeData}
+                        download={resumeFileName || 'Dev_Bhardwaj_Resume.pdf'}
+                        className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-[#242424] px-4 py-2 text-xs font-medium text-white hover:bg-[#2e2e2e] transition-colors"
+                      >
+                        <Download className="h-3.5 w-3.5 text-emerald-400" />
+                        <span>Download Attached ({resumeFileName || 'Dev_Bhardwaj_Resume.pdf'})</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={handleRemoveResume}
+                        className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1">Subscribers Badge Text</label>
-                  <input
-                    type="text"
-                    value={subscribers}
-                    onChange={(e) => setSubscribers(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-700 bg-[#121212] px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+                {resumeFileName && (
+                  <div className="mt-3 flex items-center gap-2 text-[11px] text-neutral-400 bg-[#1a1a1a] p-2.5 rounded-lg border border-neutral-800">
+                    <span className="text-white font-medium">{resumeFileName}</span>
+                    {resumeFileSize && <span>• {resumeFileSize}</span>}
+                    {resumeUploadedAt && <span>• Uploaded on {resumeUploadedAt}</span>}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                  External Resume URL / Hosted Link (Optional Fallback)
+                </label>
+                <input
+                  type="url"
+                  value={resumeUrl}
+                  onChange={(e) => setResumeUrl(e.target.value)}
+                  placeholder="e.g. https://drive.google.com/... or https://devbhardwaj.com/resume.pdf"
+                  className="w-full rounded-lg border border-neutral-700 bg-[#121212] px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+                />
               </div>
             </div>
           )}

@@ -35,10 +35,12 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
 
   // Filter projects by category and search
   const filteredProjects = projects.filter((proj) => {
+    const targetCat = selectedCategory.toLowerCase();
     const matchesCategory =
-      selectedCategory === 'all' ||
-      proj.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-      proj.tags.some((t) => t.toLowerCase().includes(selectedCategory.toLowerCase()));
+      targetCat === 'all' ||
+      proj.category.toLowerCase() === targetCat ||
+      proj.category.toLowerCase().includes(targetCat) ||
+      proj.tags.some((t) => t.toLowerCase().includes(targetCat));
 
     const matchesSearch =
       !searchTerm ||
@@ -103,14 +105,15 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
   return (
     <div className="flex-1 px-4 py-6">
       {/* Admin Notice Bar with Drag-and-Drop Hint */}
+      {/* Admin Notice Bar with Drag-and-Drop Hint */}
       {isAdmin && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-[#161616] p-3 text-xs text-neutral-300">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-600/20 text-red-400">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#272727] bg-[#1a1a1a] p-3 text-xs text-neutral-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#272727] text-neutral-300">
               <GripVertical className="h-4 w-4" />
             </div>
             <div>
-              <span className="font-semibold text-white">Admin Drag & Drop Mode Active:</span>
+              <span className="font-semibold text-white">Admin Drag & Drop Active:</span>
               <span className="ml-1 text-neutral-400">
                 Drag any project card to reorder your portfolio showcase in real time.
               </span>
@@ -119,30 +122,30 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
 
           <div className="flex items-center gap-2">
             {saveSuccessNotice && (
-              <span className="flex items-center gap-1 text-emerald-400 font-medium">
+              <span className="flex items-center gap-1 text-emerald-400 font-medium text-xs">
                 <Check className="h-3.5 w-3.5" />
                 {saveSuccessNotice}
               </span>
             )}
             <button
               onClick={onOpenUpload}
-              className="flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 px-3 py-1.5 font-semibold text-white transition-colors"
+              className="flex items-center gap-1.5 rounded-full bg-white text-black hover:bg-neutral-200 px-3.5 py-1.5 font-semibold text-xs transition-colors cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Add New Showcase Project</span>
+              <span>Add Project</span>
             </button>
           </div>
         </div>
       )}
 
       {/* Featured Banner / Channel Intro if looking at All */}
-      {selectedCategory === 'all' && !searchTerm && (
-        <div className="mb-8 overflow-hidden rounded-2xl border border-[#272727] bg-gradient-to-r from-[#171717] via-[#1c1c1c] to-[#141414] p-6">
+      {(selectedCategory.toLowerCase() === 'all' || !selectedCategory) && !searchTerm && (
+        <div className="mb-8 overflow-hidden rounded-2xl border border-[#272727] bg-[#161616] p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2 text-xs font-semibold text-red-500 uppercase tracking-wider">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Featured Developer Showcase</span>
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                <Sparkles className="h-3.5 w-3.5 text-neutral-300" />
+                <span>Developer Portfolio & Showcase</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Architecting Cloud Observability & Intelligent Web Systems
@@ -164,7 +167,7 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
               ) : (
                 <button
                   onClick={onOpenUpload}
-                  className="rounded-full bg-red-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-colors shadow-sm cursor-pointer"
+                  className="rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black hover:bg-neutral-200 transition-colors shadow-sm cursor-pointer"
                 >
                   Upload Your First Project
                 </button>
@@ -187,16 +190,16 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
       {/* Projects YouTube Grid */}
       {filteredProjects.length === 0 ? (
         <div className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#272727] p-8 text-center bg-[#131313]/60">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-400 mb-3">
-            <Plus className="h-7 w-7 text-red-500" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#212121] border border-[#2e2e2e] text-neutral-300 mb-3">
+            <Plus className="h-7 w-7 text-white" />
           </div>
           <h3 className="text-base font-bold text-white">No Projects Uploaded Yet</h3>
           <p className="text-xs text-neutral-400 mt-1 max-w-md leading-relaxed">
-            All sample data has been cleared. You can now showcase your real projects by clicking "Upload Project" to add your title, category, custom thumbnail, and deployment links.
+            All sample data has been cleared. You can now showcase your real projects by clicking "Add Project" to add your title, category, custom thumbnail, and deployment links.
           </p>
           <button
             onClick={onOpenUpload}
-            className="mt-5 flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-500 px-5 py-2.5 text-xs font-bold text-white transition-colors shadow-lg cursor-pointer"
+            className="mt-5 flex items-center gap-2 rounded-full bg-white hover:bg-neutral-200 px-5 py-2.5 text-xs font-bold text-black transition-colors shadow-lg cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Upload Your First Project</span>

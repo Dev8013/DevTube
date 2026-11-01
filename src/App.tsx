@@ -19,7 +19,7 @@ import { initialProfile, initialProjects, initialDocuments, initialAnimeDrama } 
 export default function App() {
   // Navigation & UI states
   const [currentView, setCurrentView] = useState<string>('home');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(true);
 
@@ -91,21 +91,11 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Category list for chips
-  const categoryChips = [
-    'all',
-    'Full Stack',
-    'Cloud & DevOps',
-    'AI & ML',
-    'Frontend',
-    'Mobile',
-    'Systems',
-    'React',
-    'TypeScript',
-    'Node.js',
-    'Docker',
-    'Tailwind CSS'
-  ];
+  // Category list for chips: Keep only "All" by default, dynamically derive from projects user creates
+  const dynamicCategories = Array.from(
+    new Set(projects.map((p) => p.category?.trim()).filter(Boolean) as string[])
+  );
+  const categoryChips = ['All', ...dynamicCategories.filter((c) => c.toLowerCase() !== 'all')];
 
   // Handlers for Projects
   const handleSaveProject = async (projectData: Partial<ProjectItem>) => {
@@ -302,6 +292,7 @@ export default function App() {
               profile={profile}
               isAdmin={isAdmin}
               onOpenEditProfile={() => setIsEditProfileOpen(true)}
+              onSaveProfile={handleSaveProfile}
               activeSection={currentView === 'profile' ? 'about' : currentView}
             />
           )}

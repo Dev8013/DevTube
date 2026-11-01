@@ -29,7 +29,7 @@ export const UploadProjectModal: React.FC<UploadProjectModalProps> = ({
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('/src/assets/images/yt_thumb_cloud_platform_1793508227442.jpg');
   const [duration, setDuration] = useState('14:30');
-  const [category, setCategory] = useState<'Full Stack' | 'Frontend' | 'AI & ML' | 'Cloud & DevOps' | 'Mobile' | 'Systems'>('Full Stack');
+  const [category, setCategory] = useState<string>('General');
   const [tagsInput, setTagsInput] = useState('React, TypeScript, Node.js');
   const [githubUrl, setGithubUrl] = useState('');
   const [liveDemoUrl, setLiveDemoUrl] = useState('');
@@ -144,18 +144,13 @@ export const UploadProjectModal: React.FC<UploadProjectModalProps> = ({
               <label className="block text-xs font-semibold text-neutral-300 mb-1">
                 Category
               </label>
-              <select
+              <input
+                type="text"
                 value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full rounded-lg border border-neutral-700 bg-[#121212] px-3 py-2 text-xs text-white focus:border-red-500 focus:outline-none"
-              >
-                <option value="Full Stack">Full Stack</option>
-                <option value="Cloud & DevOps">Cloud & DevOps</option>
-                <option value="AI & ML">AI & ML</option>
-                <option value="Frontend">Frontend UI/UX</option>
-                <option value="Mobile">Mobile</option>
-                <option value="Systems">Distributed Systems</option>
-              </select>
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="e.g. Web App, AI Project, Full Stack"
+                className="w-full rounded-lg border border-neutral-700 bg-[#121212] px-3 py-2 text-xs text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+              />
             </div>
           </div>
 

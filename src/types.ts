@@ -2,7 +2,6 @@ export interface UserProfile {
   name: string;
   handle: string;
   tagline: string;
-  subscribers: string;
   avatar: string;
   banner: string;
   bio: string;
@@ -31,6 +30,10 @@ export interface UserProfile {
     tech: string[];
   }[];
   resumeUrl: string;
+  resumeFileName?: string;
+  resumeData?: string;
+  resumeUploadedAt?: string;
+  resumeFileSize?: string;
 }
 
 export interface ProjectItem {
@@ -40,7 +43,7 @@ export interface ProjectItem {
   description: string;
   thumbnail: string;
   duration: string;
-  category: 'Full Stack' | 'Frontend' | 'AI & ML' | 'Cloud & DevOps' | 'Mobile' | 'Systems';
+  category: string;
   views: string;
   numericViews: number;
   likes: number;
